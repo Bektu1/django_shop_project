@@ -1,5 +1,8 @@
 from django.db import models
 from django.contrib.auth import get_user_model
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from .tasks import send_confirmation_mail
 
 class OrderStatus(models.TextChoices):
     opened = 'opened'
@@ -31,6 +34,20 @@ class OrderItem(models.Model):
     def __str__(self) -> str:
         return self.product.title
     
+    def save(self, *args, **kwargs):
+        self.total_cost = self.quantity * self.product.price
+        return super().save(self, *args, **kwargs)
+    
     class Meta:
         verbose_name = 'Заказ'
         verbose_name_plural = 'Заказы'
+
+@receiver(post_save, sender=Order)
+def send_order_confirmation_mail(sender: Order, instance: Order, created: bool, **kwargs):
+    if created:
+        send_confirmation_mail.delay(
+            instance.user.username,
+            instance.address,
+            instance.pk,
+            instance.user.email
+        )
