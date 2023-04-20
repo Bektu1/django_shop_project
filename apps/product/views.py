@@ -8,6 +8,8 @@ from .permissions import IsOwner
 class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
+    filterset_fields = ['category']
+    search_fields = ['title']
 
     def get_permissions(self):
         method = self.request.method
